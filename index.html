@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vaultline</title>
+<meta name="description" content="Watch videos and download data files. Sign in with Google to download.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Layout: sticky top bar, compact hero with search, video grid, files table, ad slots between sections. */
+  :root {
+    --bg: #0a0d13;
+    --surface: #111620;
+    --surface-2: #171d2a;
+    --line: #232b3b;
+    --text: #e8ebf2;
+    --muted: #8a93a8;
+    --accent: #5b8cff;
+    --accent-ink: #0a0d13;
+    --danger: #ff6b6b;
+    --ok: #4ade80;
+    --font-display: "Space Grotesk", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.6 var(--font-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+
+  /* Top bar */
+  .bar { position: sticky; top: 0; z-index: 20; margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding: 0 max(16px, env(safe-area-inset-left, 0px)); background: rgba(10,13,19,.88); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .bar-in { max-width: 1120px; margin: 0 auto; height: 60px; display: flex; align-items: center; gap: 20px; }
+  .brand { font-family: var(--font-display); font-weight: 700; font-size: 19px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+  .brand:hover { text-decoration: none; }
+  .logo { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; }
+  .logo svg { width: 15px; height: 15px; }
+  nav { display: flex; gap: 4px; margin-left: 8px; }
+  nav a { color: var(--muted); padding: 6px 12px; border-radius: 8px; font-weight: 500; font-size: 14px; }
+  nav a:hover { color: var(--text); background: var(--surface); text-decoration: none; }
+  nav a[aria-current="page"] { color: var(--text); background: var(--surface-2); }
+  .spacer { flex: 1; }
+  .btn { font: 500 14px var(--font-body); border: 1px solid var(--line); background: var(--surface); color: var(--text); padding: 9px 16px; border-radius: 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+  .btn:hover { background: var(--surface-2); border-color: #33405a; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.1); }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+  .btn.danger { color: var(--danger); }
+  .btn svg { width: 16px; height: 16px; flex: none; }
+  .user { display: flex; align-items: center; gap: 10px; }
+  .user img { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); }
+  .user span { font-size: 13px; color: var(--muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Hero */
+  .hero { padding: 56px 0 28px; }
+  .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.1; max-width: 18ch; }
+  .hero p { color: var(--muted); max-width: 56ch; margin: 14px 0 26px; font-size: 16px; }
+  .search { position: relative; max-width: 480px; }
+  .search input { width: 100%; font: 15px var(--font-body); color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 12px 42px; }
+  .search input::placeholder { color: var(--muted); }
+  .search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: var(--muted); }
+
+  /* Notice */
+  .notice { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; padding: 12px 16px; font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+  .notice b { color: var(--text); font-weight: 600; }
+
+  /* Ad slots */
+  .ad { margin: 28px 0; min-height: 96px; border: 1px dashed var(--line); border-radius: 10px; display: grid; place-items: center; color: #4a5368; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; overflow: hidden; }
+  .ad ins { display: block; width: 100%; }
+
+  /* Sections */
+  section { padding: 24px 0 8px; }
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  .head h2 { font-size: 24px; }
+  .count { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  /* Videos */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+  .card video { width: 100%; aspect-ratio: 16 / 9; background: #000; display: block; }
+  .card-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .card h3 { font-size: 16px; line-height: 1.3; }
+  .card p { margin: 0; color: var(--muted); font-size: 13px; }
+  .card-foot { margin-top: auto; padding-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* Files */
+  .table { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 56px minmax(0, 1fr) 90px auto; gap: 14px; align-items: center; padding: 14px 18px; border-top: 1px solid var(--line); }
+  .row:first-child { border-top: 0; }
+  .ext { font: 600 11px var(--font-mono); text-transform: uppercase; text-align: center; padding: 6px 0; border-radius: 7px; background: var(--surface-2); color: var(--accent); border: 1px solid var(--line); }
+  .fname { min-width: 0; }
+  .fname strong { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fname span { color: var(--muted); font-size: 13px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .size { color: var(--muted); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+  .actions { display: flex; gap: 8px; }
+  .empty { padding: 36px 18px; text-align: center; color: var(--muted); }
+
+  /* Admin */
+  .admin { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .admin h2 { font-size: 20px; margin-bottom: 4px; }
+  .admin > p { color: var(--muted); margin: 0 0 16px; font-size: 13px; }
+  .form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .form label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); min-width: 0; }
+  .form .full { grid-column: 1 / -1; }
+  .form input, .form select, .form textarea { font: 14px var(--font-body); color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; width: 100%; }
+  .form textarea { min-height: 64px; resize: vertical; }
+
+  /* Static pages */
+  .prose { max-width: 70ch; padding: 48px 0 40px; }
+  .prose h1 { font-size: 34px; margin-bottom: 18px; }
+  .prose h2 { font-size: 20px; margin: 28px 0 8px; }
+  .prose p, .prose li { color: #b9c0d0; }
+
+  footer { margin-top: 56px; border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+  footer nav { margin: 0; gap: 16px; }
+  footer nav a { padding: 0; background: none; }
+
+  /* Dialog and toast */
+  dialog { background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(760px, calc(100vw - 32px)); max-height: 82vh; }
+  dialog::backdrop { background: rgba(0,0,0,.65); }
+  .dlg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .dlg-head h3 { font-size: 16px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  pre { margin: 0; padding: 18px; overflow: auto; max-height: 60vh; font: 13px/1.55 var(--font-mono); color: #cfd6e6; white-space: pre-wrap; word-break: break-word; }
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); background: var(--surface-2); border: 1px solid var(--line); padding: 11px 18px; border-radius: 10px; font-size: 14px; opacity: 0; pointer-events: none; transition: .25s; z-index: 50; max-width: calc(100vw - 32px); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 720px) {
+    .bar-in { gap: 10px; }
+    nav { display: none; }
+    .user span { display: none; }
+    .row { grid-template-columns: 48px minmax(0, 1fr) auto; }
+    .row .size { display: none; }
+    .form { grid-template-columns: 1fr; }
+    .hero { padding-top: 36px; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .toast { transition: none; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="#home">
+      <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0a0d13" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 21h16"/></svg></span>
+      <span id="brandName">Vaultline</span>
+    </a>
+    <nav aria-label="Main">
+      <a href="#videos" data-nav="home">Videos</a>
+      <a href="#files" data-nav="home">Files</a>
+      <a href="#about" data-nav="about">About</a>
+    </nav>
+    <div class="spacer"></div>
+    <button class="btn primary" id="signIn" type="button">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.35 11.1H12v2.98h5.35c-.23 1.4-1.6 4.1-5.35 4.1a5.9 5.9 0 010-11.8c1.9 0 3.17.8 3.9 1.5l2.65-2.55C17.5 3.8 15 2.7 12 2.7a9.3 9.3 0 100 18.6c5.37 0 8.93-3.77 8.93-9.1 0-.6-.07-1.06-.15-1.1z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="user" id="userBox" hidden>
+      <img id="avatar" alt="" referrerpolicy="no-referrer">
+      <span id="userName"></span>
+      <button class="btn small" id="signOut" type="button">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- HOME -->
+  <div id="view-home">
+    <div class="hero">
+      <h1>Watch, preview and download.</h1>
+      <p>A library of videos and data files. Anyone can browse. Sign in with Google to download.</p>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Search videos and files" aria-label="Search">
+      </div>
+    </div>
+
+    <div class="notice" id="demoNotice" hidden>
+      <b>Demo mode.</b> Firebase is not connected yet, so sample items are shown and sign-in is off. Follow SETUP.md to connect it.
+    </div>
+
+    <div class="ad" data-ad="top">Advertisement</div>
+
+    <section id="admin" hidden>
+      <div class="admin">
+        <h2>Add to library</h2>
+        <p>Only you see this. Upload the file to Cloudinary or Supabase first, then paste its link here.</p>
+        <form class="form" id="addForm">
+          <label>Type
+            <select id="fKind"><option value="video">Video</option><option value="file">File</option></select>
+          </label>
+          <label>Title
+            <input id="fTitle" required maxlength="120">
+          </label>
+          <label class="full">Link (URL of the uploaded file)
+            <input id="fUrl" type="url" required placeholder="https://...">
+          </label>
+          <label>File extension (files only)
+            <input id="fExt" placeholder="csv, json, mdf ...">
+          </label>
+          <label>Size (for example 4.2 MB)
+            <input id="fSize" placeholder="4.2 MB">
+          </label>
+          <label class="full">Description
+            <textarea id="fDesc" maxlength="300"></textarea>
+          </label>
+          <div class="full"><button class="btn primary" type="submit">Add</button></div>
+        </form>
+      </div>
+    </section>
+
+    <section id="videos">
+      <div class="head"><h2>Videos</h2><span class="count" id="vCount"></span></div>
+      <div class="grid" id="vGrid"></div>
+    </section>
+
+    <div class="ad" data-ad="middle">Advertisement</div>
+
+    <section id="files">
+      <div class="head"><h2>Files</h2><span class="count" id="fCount"></span></div>
+      <div class="table" id="fTable"></div>
+    </section>
+
+    <div class="ad" data-ad="bottom">Advertisement</div>
+  </div>
+
+  <!-- ABOUT -->
+  <article class="prose" id="view-about" hidden>
+    <h1>About</h1>
+    <p>This site is a library of videos and data files that you can watch, preview and download. Everything here is published by the site owner, who has the rights to share it.</p>
+    <h2>Who runs it</h2>
+    <p>Replace this paragraph with your name or organization and how people can reach you. Add a contact email so visitors and ad networks can find you.</p>
+    <h2>Why sign-in</h2>
+    <p>Downloads need a Google sign-in. This helps keep the library free of abuse. Your Google password is never shared with this site.</p>
+  </article>
+
+  <!-- PRIVACY -->
+  <article class="prose" id="view-privacy" hidden>
+    <h1>Privacy Policy</h1>
+    <p>Last updated: November 2026.</p>
+    <h2>What we collect</h2>
+    <p>When you sign in with Google, we receive your name, email address and profile picture from Google. We never receive your Google password.</p>
+    <h2>How we use it</h2>
+    <p>We use this information only to let you sign in and to allow downloads. We do not sell it.</p>
+    <h2>Advertising</h2>
+    <p>This site may show ads from Google AdSense. Google and its partners may use cookies to show ads based on your visits to this and other sites. You can manage ad personalization in your Google account's ad settings.</p>
+    <h2>Third-party services</h2>
+    <p>This site uses Firebase (Google) for sign-in and data storage, and may use Cloudinary or Supabase to host media and files.</p>
+    <h2>Contact</h2>
+    <p>Replace this line with your contact email.</p>
+  </article>
+</main>
+
+<footer class="wrap">
+  <span id="foot">&copy; <span id="yr"></span> Vaultline</span>
+  <nav aria-label="Footer"><a href="#about">About</a><a href="#privacy">Privacy Policy</a></nav>
+</footer>
+
+<dialog id="dlg">
+  <div class="dlg-head"><h3 id="dlgTitle"></h3><button class="btn small" id="dlgClose" type="button">Close</button></div>
+  <pre id="dlgBody"></pre>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script type="module">
+/* ================= SETTINGS: edit this block ================= */
+const CONFIG = {
+  siteName: "Vaultline",
+  requireLogin: true,                       // true = downloads need Google sign-in
+  adminEmails: ["you@gmail.com"],           // only these Google accounts see the "Add to library" form
+  adsenseClient: "",                        // e.g. "ca-pub-1234567890123456" after AdSense approval
+  adSlots: { top: "", middle: "", bottom: "" }, // AdSense slot IDs
+  firebase: {                               // paste from Firebase console > Project settings > Your apps
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    appId: "YOUR_APP_ID"
+  }
+};
+/* ============================================================== */
+
+const $ = (s, r = document) => r.querySelector(s);
+const demo = CONFIG.firebase.apiKey === "YOUR_API_KEY";
+let user = null, items = [], db = null, fb = null;
+
+const SAMPLE = [
+  { id: "s1", kind: "video", title: "Sample video one", desc: "Demo clip. Replace with your own videos.", url: "https://www.w3schools.com/html/mov_bbb.mp4", size: "1 MB" },
+  { id: "s2", kind: "video", title: "Sample video two", desc: "Demo clip. Replace with your own videos.", url: "https://www.w3schools.com/html/mov_bbb.mp4", size: "1 MB" },
+  { id: "s3", kind: "file", title: "sales_2026.csv", ext: "csv", desc: "Monthly sales by region", size: "0.1 KB", content: "month,region,units\nJan,North,120\nJan,South,95\nFeb,North,140\nFeb,South,101\n" },
+  { id: "s4", kind: "file", title: "config.json", ext: "json", desc: "Example configuration", size: "0.1 KB", content: '{\n  "name": "demo",\n  "version": 1,\n  "features": ["login", "downloads"]\n}\n' },
+  { id: "s5", kind: "file", title: "notes.txt", ext: "txt", desc: "Plain text notes", size: "0.1 KB", content: "Release notes\n- Added Google sign-in\n- Added file downloads\n" },
+  { id: "s6", kind: "file", title: "orders.xml", ext: "xml", desc: "Sample XML export", size: "0.2 KB", content: '<?xml version="1.0"?>\n<orders>\n  <order id="1"><total>49.90</total></order>\n  <order id="2"><total>12.00</total></order>\n</orders>\n' },
+  { id: "s7", kind: "file", title: "AdventureWorks.mdf", ext: "mdf", desc: "SQL Server primary data file (example entry, no real file)", size: "180 MB", url: "" }
+];
+
+const TEXT_EXT = ["csv", "json", "txt", "md", "xml", "log", "sql"];
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2800); }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+const ICON_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 21h16"/></svg>';
+
+/* ---------- Routing (hash views) ---------- */
+function route() {
+  const h = location.hash.replace("#", "") || "home";
+  const view = h === "about" ? "about" : h === "privacy" ? "privacy" : "home";
+  for (const v of ["home", "about", "privacy"]) $("#view-" + v).hidden = v !== view;
+  document.querySelectorAll("nav[aria-label=Main] a").forEach(a => a.removeAttribute("aria-current"));
+  if (view === "about") document.querySelector('nav a[href="#about"]').setAttribute("aria-current", "page");
+  if (view === "home" && (h === "videos" || h === "files")) requestAnimationFrame(() => $("#" + h).scrollIntoView());
+  else if (view !== "home" || h === "home") window.scrollTo(0, 0);
+}
+addEventListener("hashchange", route);
+
+/* ---------- Rendering ---------- */
+function fileUrl(it) {
+  if (it.url) return it.url;
+  if (it.content != null) return URL.createObjectURL(new Blob([it.content], { type: "text/plain" }));
+  return "";
+}
+
+function render() {
+  const q = $("#q").value.trim().toLowerCase();
+  const match = it => !q || (it.title + " " + (it.desc || "") + " " + (it.ext || "")).toLowerCase().includes(q);
+  const vids = items.filter(i => i.kind === "video" && match(i));
+  const files = items.filter(i => i.kind === "file" && match(i));
+  const isAdmin = user && CONFIG.adminEmails.includes(user.email);
+
+  $("#vCount").textContent = vids.length + (vids.length === 1 ? " video" : " videos");
+  $("#fCount").textContent = files.length + (files.length === 1 ? " file" : " files");
+
+  const grid = $("#vGrid"); grid.replaceChildren();
+  if (!vids.length) grid.append(el("div", "empty", "No videos found."));
+  for (const v of vids) {
+    const c = el("div", "card");
+    const vid = document.createElement("video");
+    vid.controls = true; vid.preload = "metadata"; vid.playsInline = true; vid.setAttribute("controlsList", "nodownload");
+    vid.src = v.url; c.append(vid);
+    const b = el("div", "card-body");
+    b.append(el("h3", "", v.title));
+    if (v.desc) b.append(el("p", "", v.desc));
+    const f = el("div", "card-foot");
+    f.append(el("span", "meta", v.size || ""));
+    const act = el("div", "actions");
+    const dl = el("button", "btn small primary"); dl.type = "button"; dl.innerHTML = ICON_DL + "Download";
+    dl.addEventListener("click", () => download(v, v.title + ".mp4"));
+    act.append(dl);
+    if (isAdmin && !String(v.id).startsWith("s")) act.append(delBtn(v));
+    f.append(act); b.append(f); c.append(b); grid.append(c);
+  }
+
+  const tbl = $("#fTable"); tbl.replaceChildren();
+  if (!files.length) tbl.append(el("div", "empty", "No files found."));
+  for (const f of files) {
+    const r = el("div", "row");
+    r.append(el("div", "ext", f.ext || "file"));
+    const n = el("div", "fname"); n.append(el("strong", "", f.title)); if (f.desc) n.append(el("span", "", f.desc));
+    r.append(n, el("div", "size", f.size || ""));
+    const act = el("div", "actions");
+    if (TEXT_EXT.includes((f.ext || "").toLowerCase())) {
+      const pv = el("button", "btn small", "Preview"); pv.type = "button"; pv.addEventListener("click", () => preview(f)); act.append(pv);
+    }
+    const dl = el("button", "btn small primary"); dl.type = "button"; dl.innerHTML = ICON_DL + "Download";
+    dl.addEventListener("click", () => download(f, f.title.includes(".") ? f.title : f.title + "." + (f.ext || "")));
+    act.append(dl);
+    if (isAdmin && !String(f.id).startsWith("s")) act.append(delBtn(f));
+    r.append(act); tbl.append(r);
+  }
+  $("#admin").hidden = !isAdmin;
+}
+
+function delBtn(it) {
+  const b = el("button", "btn small danger", "Delete"); b.type = "button";
+  b.addEventListener("click", async () => {
+    if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = "Confirm?"; setTimeout(() => { b.dataset.armed = ""; b.textContent = "Delete"; }, 3000); return; }
+    try { await fb.deleteDoc(fb.doc(db, "items", it.id)); toast("Deleted"); } catch (e) { toast("Delete failed: " + e.message); }
+  });
+  return b;
+}
+
+/* ---------- Download and preview ---------- */
+async function download(it, name) {
+  if (CONFIG.requireLogin && !user) { toast("Sign in with Google to download."); if (!demo) signIn(); return; }
+  const url = fileUrl(it);
+  if (!url) { toast("This is a sample entry with no real file."); return; }
+  try {
+    const r = await fetch(url); if (!r.ok) throw new Error("HTTP " + r.status);
+    const blob = await r.blob(); const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch { window.open(url, "_blank", "noopener"); }
+}
+
+async function preview(it) {
+  $("#dlgTitle").textContent = it.title; $("#dlgBody").textContent = "Loading...";
+  $("#dlg").showModal();
+  try {
+    let text = it.content;
+    if (text == null) { const r = await fetch(it.url); if (!r.ok) throw new Error("HTTP " + r.status); text = await r.text(); }
+    $("#dlgBody").textContent = text.length > 20000 ? text.slice(0, 20000) + "\n\n... preview cut at 20,000 characters" : text;
+  } catch { $("#dlgBody").textContent = "Preview is not available for this file. Use Download instead."; }
+}
+$("#dlgClose").addEventListener("click", () => $("#dlg").close());
+
+/* ---------- Auth ---------- */
+async function signIn() {
+  if (demo) { toast("Demo mode: connect Firebase first (see SETUP.md)."); return; }
+  try { await fb.signInWithPopup(fb.auth, new fb.GoogleAuthProvider()); }
+  catch (e) { if (e.code !== "auth/popup-closed-by-user") toast("Sign-in failed. Check that this domain is authorized in Firebase."); }
+}
+$("#signIn").addEventListener("click", signIn);
+$("#signOut").addEventListener("click", () => fb && fb.signOut(fb.auth));
+
+function setUser(u) {
+  user = u;
+  $("#signIn").hidden = !!u; $("#userBox").hidden = !u;
+  if (u) { $("#userName").textContent = u.displayName || u.email; $("#avatar").src = u.photoURL || ""; }
+  render();
+}
+
+/* ---------- Admin form ---------- */
+$("#addForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!user || !CONFIG.adminEmails.includes(user.email)) return;
+  const kind = $("#fKind").value;
+  const doc = { kind, title: $("#fTitle").value.trim(), url: $("#fUrl").value.trim(), ext: $("#fExt").value.trim().replace(/^\./, ""), size: $("#fSize").value.trim(), desc: $("#fDesc").value.trim(), createdAt: fb.serverTimestamp() };
+  try { await fb.addDoc(fb.collection(db, "items"), doc); e.target.reset(); toast("Added"); }
+  catch (err) { toast("Could not save: " + err.message); }
+});
+
+/* ---------- Ads ---------- */
+function setupAds() {
+  if (!CONFIG.adsenseClient) return;
+  const s = document.createElement("script"); s.async = true; s.crossOrigin = "anonymous";
+  s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + CONFIG.adsenseClient; document.head.append(s);
+  document.querySelectorAll(".ad").forEach(box => {
+    const slot = CONFIG.adSlots[box.dataset.ad]; if (!slot) return;
+    box.replaceChildren(); box.style.border = "0";
+    const ins = document.createElement("ins"); ins.className = "adsbygoogle";
+    ins.dataset.adClient = CONFIG.adsenseClient; ins.dataset.adSlot = slot; ins.dataset.adFormat = "auto"; ins.dataset.fullWidthResponsive = "true";
+    box.append(ins);
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch {}
+  });
+}
+
+/* ---------- Start ---------- */
+$("#q").addEventListener("input", render);
+$("#yr").textContent = new Date().getFullYear();
+document.title = CONFIG.siteName;
+$("#brandName").textContent = CONFIG.siteName;
+$("#foot").lastChild && ($("#foot").innerHTML = "&copy; " + new Date().getFullYear() + " ");
+$("#foot").append(document.createTextNode(CONFIG.siteName));
+route();
+setupAds();
+
+if (demo) {
+  $("#demoNotice").hidden = false; items = SAMPLE; render();
+} else {
+  try {
+    const V = "10.12.2", base = "https://www.gstatic.com/firebasejs/" + V + "/";
+    const [app, auth, fs] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")]);
+    const a = app.initializeApp(CONFIG.firebase);
+    db = fs.getFirestore(a);
+    fb = { ...auth, ...fs, auth: auth.getAuth(a) };
+    auth.onAuthStateChanged(fb.auth, setUser);
+    fs.onSnapshot(fs.query(fs.collection(db, "items"), fs.orderBy("createdAt", "desc")),
+      snap => { items = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); },
+      err => { toast("Could not load library: " + err.code); render(); });
+  } catch (e) {
+    $("#demoNotice").hidden = false; $("#demoNotice").lastElementChild; items = SAMPLE; render();
+    toast("Firebase failed to load. Showing samples.");
+  }
+}
+</script>
+</body>
+</html>
